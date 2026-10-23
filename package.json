@@ -1,0 +1,14 @@
+{
+  "name": "react-native-ergometer-monorepo",
+  "private": true,
+  "description": "React Native library for fitness ergometers over Bluetooth Low Energy",
+  "license": "MIT",
+  "author": "Serhii Hryshko (https://github.com/sergey-g-s)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergey-g-s/react-native-ergometer.git"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
