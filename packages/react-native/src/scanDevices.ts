@@ -4,17 +4,12 @@ import {
   parsePm5MachineType,
   parsePm5SerialNumber,
 } from '@ergometer/pm5';
-import { PermissionsAndroid, Platform } from 'react-native';
-import { BleManager, State, type Device } from 'react-native-ble-plx';
-
-// Hermes has atob built in, but React Native's TypeScript types don't declare it.
-declare const atob: (data: string) => string;
+import type { BleManager, Device } from 'react-native-ble-plx';
+import { base64ToBytes, getReadyBleManager } from './ble';
 
 // A device that hasn't advertised for this long has gone away (switched off or out of range).
 const DEVICE_TIMEOUT_MS = 10_000;
 const UPDATE_INTERVAL_MS = 1_000;
-
-let manager: BleManager | undefined;
 
 /** Thrown when a scan can't start or stops because of an error. */
 export class ScanError extends Error {
@@ -32,13 +27,15 @@ export async function scanDevices(
   onDevices: (devices: ErgDevice[]) => void,
   onError?: (error: ScanError) => void,
 ): Promise<() => void> {
-  if (!(await requestPermissions())) {
-    throw new ScanError('Bluetooth permission was denied');
+  let bleManager: BleManager;
+  try {
+    bleManager = await getReadyBleManager();
+  } catch (error) {
+    throw new ScanError(
+      error instanceof Error ? error.message : 'Bluetooth is not available',
+      { cause: error },
+    );
   }
-
-  manager ??= new BleManager();
-  const bleManager = manager;
-  await waitUntilPoweredOn(bleManager);
 
   const devices = new Map<string, { device: ErgDevice; lastSeen: number }>();
   let changed = false;
@@ -102,43 +99,6 @@ function isSameDevice(a: ErgDevice, b: ErgDevice): boolean {
   );
 }
 
-async function requestPermissions(): Promise<boolean> {
-  if (Platform.OS !== 'android') {
-    return true;
-  }
-  if (Platform.Version >= 31) {
-    const results = await PermissionsAndroid.requestMultiple([
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-    ]);
-    return Object.values(results).every(
-      result => result === PermissionsAndroid.RESULTS.GRANTED,
-    );
-  }
-  const result = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-  );
-  return result === PermissionsAndroid.RESULTS.GRANTED;
-}
-
-function waitUntilPoweredOn(bleManager: BleManager): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const subscription = bleManager.onStateChange(state => {
-      if (state === State.PoweredOn) {
-        subscription.remove();
-        resolve();
-      } else if (
-        state === State.PoweredOff ||
-        state === State.Unauthorized ||
-        state === State.Unsupported
-      ) {
-        subscription.remove();
-        reject(new ScanError(`Bluetooth is ${state}`));
-      }
-    }, true);
-  });
-}
-
 function toErgDevice(device: Device): ErgDevice {
   const name = device.localName ?? device.name;
   return {
@@ -157,7 +117,5 @@ function readFtmsServiceData(device: Device): Uint8Array | null {
       uuid.toLowerCase() === '1826' ||
       uuid.toLowerCase().startsWith('00001826'),
   );
-  return entry
-    ? Uint8Array.from(atob(entry[1]), char => char.charCodeAt(0))
-    : null;
+  return entry ? base64ToBytes(entry[1]) : null;
 }

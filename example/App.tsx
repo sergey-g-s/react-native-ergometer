@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  connectDevice,
   fetchLatestPm5Firmware,
+  useErgConnection,
+  useErgConnections,
   useErgScanner,
+  type ErgDevice,
+  type Pm5Connection,
   type Pm5Firmware,
 } from 'react-native-ergometer';
 import {
@@ -11,6 +16,8 @@ import {
   StyleSheet,
   Text,
   useColorScheme,
+  View,
+  type TextStyle,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
@@ -36,11 +43,81 @@ function useLatestFirmware() {
   return { state, reload: load };
 }
 
+function NearbyDevice({
+  device,
+  textStyle,
+}: {
+  device: ErgDevice;
+  textStyle: TextStyle;
+}) {
+  const { status, error } = useErgConnection(device.id);
+  const titles = {
+    disconnected: 'Connect',
+    connecting: 'Connecting…',
+    connected: 'Connected',
+  };
+
+  return (
+    <View style={styles.row}>
+      <Text style={textStyle}>
+        {device.machineType ?? 'unknown'} ·{' '}
+        {device.serialNumber ?? device.name ?? device.id} · {device.rssi ?? '?'}{' '}
+        dBm
+      </Text>
+      <Button
+        title={titles[status]}
+        disabled={status !== 'disconnected'}
+        onPress={() => {
+          connectDevice(device).catch(() => {});
+        }}
+      />
+      {error && <Text style={styles.error}>{error.message}</Text>}
+    </View>
+  );
+}
+
+function ConnectedDevice({
+  connection,
+  textStyle,
+}: {
+  connection: Pm5Connection;
+  textStyle: TextStyle;
+}) {
+  const fields: [string, string][] = [
+    ['id', connection.id],
+    ['serialNumber', connection.serialNumber ?? '—'],
+    ['machineType', connection.machineType ?? '—'],
+    ['firmwareVersion', connection.firmwareVersion ?? '—'],
+    ['hardwareRevision', connection.hardwareRevision ?? '—'],
+    ['isConnected', String(connection.isConnected)],
+  ];
+
+  return (
+    <View style={styles.row}>
+      <Text style={[styles.deviceName, textStyle]}>
+        {connection.name ?? connection.id}
+      </Text>
+      {fields.map(([label, value]) => (
+        <Text key={label} style={textStyle}>
+          {label}: {value}
+        </Text>
+      ))}
+      <Button
+        title="Disconnect"
+        onPress={() => {
+          connection.disconnect().catch(() => {});
+        }}
+      />
+    </View>
+  );
+}
+
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const textStyle = isDarkMode ? styles.textDark : styles.textLight;
   const { state: firmwareState, reload: reloadFirmware } = useLatestFirmware();
   const { devices, error: scanError } = useErgScanner();
+  const connections = useErgConnections();
 
   return (
     <SafeAreaProvider>
@@ -56,11 +133,21 @@ function App() {
             <Text style={textStyle}>Searching…</Text>
           )}
           {devices.map(device => (
-            <Text key={device.id} style={textStyle}>
-              {device.machineType ?? 'unknown'} ·{' '}
-              {device.serialNumber ?? device.name ?? device.id} ·{' '}
-              {device.rssi ?? '?'} dBm
-            </Text>
+            <NearbyDevice
+              key={device.id}
+              device={device}
+              textStyle={textStyle}
+            />
+          ))}
+
+          <Text style={[styles.subtitle, textStyle]}>Connected</Text>
+          {connections.length === 0 && <Text style={textStyle}>None</Text>}
+          {connections.map(connection => (
+            <ConnectedDevice
+              key={connection.id}
+              connection={connection}
+              textStyle={textStyle}
+            />
           ))}
 
           <Text style={[styles.subtitle, textStyle]}>Latest PM5 firmware</Text>
@@ -104,6 +191,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginTop: 8,
+  },
+  row: {
+    gap: 4,
+  },
+  deviceName: {
+    fontWeight: '500',
   },
   textLight: {
     color: '#000000',
