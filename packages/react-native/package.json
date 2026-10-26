@@ -53,6 +53,17 @@
     "@ergometer/core": "workspace:*",
     "@ergometer/pm5": "workspace:*"
   },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-ble-plx": "^3.5.1"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "react-native": "catalog:",
+    "react-native-ble-plx": "catalog:"
+  },
   "react-native-builder-bob": {
     "source": "src",
     "output": "lib",
