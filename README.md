@@ -4,7 +4,7 @@ React Native library for Concept2 PM5 performance monitors over Bluetooth Low En
 
 Built on [react-native-ble-plx](https://github.com/dotintent/react-native-ble-plx). Support for machines that use the standard Fitness Machine Service (FTMS) is planned.
 
-> **Status:** early development, not published to npm yet.
+> **Status:** early development. Until 1.0, minor versions may change the API.
 
 ## Features
 
@@ -163,7 +163,7 @@ The original error, when there is one, is in `error.cause`.
 
 ## Example app
 
-[`example/`](example) is a React Native app for trying the library on a device: it lists nearby monitors, connects, shows the connection details and starts a 2000 m workout. See [example/README.md](example/README.md).
+[`example/`](https://github.com/sergey-g-s/react-native-ergometer/tree/main/example) is a React Native app for trying the library on a device: it lists nearby monitors, connects, shows the connection details and starts a 2000 m workout. See [example/README.md](https://github.com/sergey-g-s/react-native-ergometer/blob/main/example/README.md).
 
 ## Development
 
@@ -197,7 +197,7 @@ Changes go through a pull request. Add a changeset (`pnpm changeset`) when you c
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/sergey-g-s/react-native-ergometer/blob/main/LICENSE)
 
 ## Disclaimer
 
