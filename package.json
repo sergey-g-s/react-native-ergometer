@@ -8,7 +8,20 @@
     "type": "git",
     "url": "git+https://github.com/sergey-g-s/react-native-ergometer.git"
   },
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "react-native-builder-bob": "^0.44.1",
+    "typescript": "^6.0.3"
   }
 }

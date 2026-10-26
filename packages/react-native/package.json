@@ -1,0 +1,80 @@
+{
+  "name": "react-native-ergometer",
+  "version": "0.0.0",
+  "description": "React Native library for fitness ergometers over Bluetooth Low Energy",
+  "license": "MIT",
+  "author": "Serhii Hryshko (https://github.com/sergey-g-s)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergey-g-s/react-native-ergometer.git",
+    "directory": "packages/react-native"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "bluetooth",
+    "ble",
+    "ergometer",
+    "rowing",
+    "pm5",
+    "ftms"
+  ],
+  "main": "./lib/commonjs/index.js",
+  "module": "./lib/module/index.js",
+  "types": "./lib/typescript/commonjs/src/index.d.ts",
+  "exports": {
+    ".": {
+      "@ergometer/source": "./src/index.ts",
+      "import": {
+        "types": "./lib/typescript/module/src/index.d.ts",
+        "default": "./lib/module/index.js"
+      },
+      "require": {
+        "types": "./lib/typescript/commonjs/src/index.d.ts",
+        "default": "./lib/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "lib",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "bob build",
+    "prepack": "bob build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ergometer/core": "workspace:*",
+    "@ergometer/pm5": "workspace:*"
+  },
+  "react-native-builder-bob": {
+    "source": "src",
+    "output": "lib",
+    "targets": [
+      [
+        "module",
+        {
+          "esm": true
+        }
+      ],
+      [
+        "commonjs",
+        {
+          "esm": true
+        }
+      ],
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ]
+    ]
+  }
+}
