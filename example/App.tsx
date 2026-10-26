@@ -1,5 +1,10 @@
-import * as Ergometer from 'react-native-ergometer';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  fetchLatestPm5Firmware,
+  type Pm5Firmware,
+} from 'react-native-ergometer';
+import {
+  Button,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -8,11 +13,32 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
-const exportedNames = Object.keys(Ergometer).sort();
+type FirmwareState =
+  | { status: 'loading' }
+  | { status: 'loaded'; firmware: Pm5Firmware[] }
+  | { status: 'error'; message: string };
+
+function useLatestFirmware() {
+  const [state, setState] = useState<FirmwareState>({ status: 'loading' });
+
+  const load = useCallback(() => {
+    setState({ status: 'loading' });
+    fetchLatestPm5Firmware()
+      .then(firmware => setState({ status: 'loaded', firmware }))
+      .catch((error: unknown) =>
+        setState({ status: 'error', message: String(error) }),
+      );
+  }, []);
+
+  useEffect(load, [load]);
+
+  return { state, reload: load };
+}
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const textStyle = isDarkMode ? styles.textDark : styles.textLight;
+  const { state: firmwareState, reload: reloadFirmware } = useLatestFirmware();
 
   return (
     <SafeAreaProvider>
@@ -22,14 +48,21 @@ function App() {
       >
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={[styles.title, textStyle]}>react-native-ergometer</Text>
-          <Text style={[styles.subtitle, textStyle]}>
-            Exports ({exportedNames.length})
-          </Text>
-          {exportedNames.map(name => (
-            <Text key={name} style={textStyle}>
-              {name}
-            </Text>
-          ))}
+          <Text style={[styles.subtitle, textStyle]}>Latest PM5 firmware</Text>
+          {firmwareState.status === 'loading' && (
+            <Text style={textStyle}>Loading…</Text>
+          )}
+          {firmwareState.status === 'error' && (
+            <Text style={styles.error}>{firmwareState.message}</Text>
+          )}
+          {firmwareState.status === 'loaded' &&
+            firmwareState.firmware.map(item => (
+              <Text key={item.monitor} style={textStyle}>
+                {item.machine} · hw {item.hardware} · {item.version} ·{' '}
+                {item.releaseDate}
+              </Text>
+            ))}
+          <Button title="Reload firmware" onPress={reloadFirmware} />
         </ScrollView>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -62,6 +95,9 @@ const styles = StyleSheet.create({
   },
   textDark: {
     color: '#ffffff',
+  },
+  error: {
+    color: '#d32f2f',
   },
 });
 

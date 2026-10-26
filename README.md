@@ -2,7 +2,7 @@
 
 React Native library for connecting to fitness ergometers over Bluetooth Low Energy (BLE).
 
-> **Status:** early development. Nothing is usable yet.
+> **Status:** early development, not published to npm yet. BLE support is not ready.
 
 ## Goals
 
@@ -10,6 +10,17 @@ React Native library for connecting to fitness ergometers over Bluetooth Low Ene
 - Later: machines that implement the standard Bluetooth Fitness Machine Service (FTMS).
 - Simple hooks API for scanning, connecting and reading live workout metrics.
 - Works with Expo (development build) and bare React Native. Expo Go is not supported, because BLE needs native code.
+
+## API
+
+### `fetchLatestPm5Firmware(options?)`
+
+Latest public PM5 firmware, one entry per hardware revision and machine type. Throws `FirmwareFetchError` on failure.
+
+```ts
+const firmware = await fetchLatestPm5Firmware({ machine: 'rower' });
+// [{ machine: 'rower', hardware: 6, version: '459.069', releaseDate: '2026-06-27', ... }, ...]
+```
 
 ## License
 

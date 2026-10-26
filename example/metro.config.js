@@ -14,8 +14,9 @@ const config = {
   // Watch the whole monorepo: workspace packages and pnpm's store live outside example/.
   watchFolders: [root],
   resolver: {
-    // Load workspace packages from src/ (see "exports" in packages/*/package.json),
-    // so changes show up on reload without rebuilding lib/.
+    // Packages compiled from src/ import Babel helpers that pnpm installs only here.
+    nodeModulesPaths: [path.resolve(__dirname, 'node_modules')],
+    // Load workspace packages from src/ instead of the built lib/.
     unstable_conditionNames: [
       '@ergometer/source',
       ...defaultConfig.resolver.unstable_conditionNames,
