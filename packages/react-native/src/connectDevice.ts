@@ -1,11 +1,18 @@
-import type { ErgConnection, ErgDevice } from '@ergometer/core';
+import type { ErgConnection, ErgDevice, Workout } from '@ergometer/core';
 import {
+  PM5_CONTROL,
   PM5_INFO,
+  distanceWorkoutFrames,
   parseErgMachineType,
   parsePm5FirmwareVersion,
 } from '@ergometer/pm5';
 import type { BleError, BleManager, Subscription } from 'react-native-ble-plx';
-import { base64ToBytes, bytesToText, getReadyBleManager } from './ble';
+import {
+  base64ToBytes,
+  bytesToBase64,
+  bytesToText,
+  getReadyBleManager,
+} from './ble';
 import { getConnectionState, setConnectionState } from './connections';
 
 const CONNECT_TIMEOUT_MS = 20_000;
@@ -58,6 +65,21 @@ export class Pm5Connection implements ErgConnection {
 
   get isConnected(): boolean {
     return this.connected;
+  }
+
+  /** Programs a fixed-distance workout and opens its screen on the PM5, ready to row. */
+  async startWorkout(workout: Workout): Promise<void> {
+    if (!this.connected) {
+      throw new ConnectionError('PM5 is not connected');
+    }
+    for (const frame of distanceWorkoutFrames(workout.distance)) {
+      await this.bleManager.writeCharacteristicWithResponseForDevice(
+        this.id,
+        PM5_CONTROL.service,
+        PM5_CONTROL.command,
+        bytesToBase64(frame),
+      );
+    }
   }
 
   async disconnect(): Promise<void> {

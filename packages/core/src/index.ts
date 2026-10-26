@@ -12,6 +12,11 @@ export interface ErgDevice {
   serialNumber: string | null;
 }
 
+/** A workout to program on the machine. Distance is in meters. */
+export interface Workout {
+  distance: number;
+}
+
 /** An open connection to a machine. Once it closes, connect again to get a new one. */
 export interface ErgConnection {
   readonly id: string;
@@ -21,6 +26,7 @@ export interface ErgConnection {
   readonly hardwareRevision: string | null;
   readonly firmwareVersion: string | null;
   readonly isConnected: boolean;
+  startWorkout(workout: Workout): Promise<void>;
   disconnect(): Promise<void>;
   onDisconnect(listener: (error: Error | null) => void): () => void;
 }

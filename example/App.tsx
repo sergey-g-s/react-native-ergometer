@@ -83,6 +83,7 @@ function ConnectedDevice({
   connection: Pm5Connection;
   textStyle: TextStyle;
 }) {
+  const [workoutError, setWorkoutError] = useState<string | null>(null);
   const fields: [string, string][] = [
     ['id', connection.id],
     ['serialNumber', connection.serialNumber ?? '—'],
@@ -102,6 +103,16 @@ function ConnectedDevice({
           {label}: {value}
         </Text>
       ))}
+      <Button
+        title="Start 2000 m"
+        onPress={() => {
+          setWorkoutError(null);
+          connection
+            .startWorkout({ distance: 2000 })
+            .catch((error: unknown) => setWorkoutError(String(error)));
+        }}
+      />
+      {workoutError && <Text style={styles.error}>{workoutError}</Text>}
       <Button
         title="Disconnect"
         onPress={() => {
