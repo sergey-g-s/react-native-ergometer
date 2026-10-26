@@ -1,0 +1,17 @@
+# Git hooks. `pnpm install` installs them automatically.
+# Docs: https://lefthook.dev/configuration/
+
+pre-commit:
+  jobs:
+    - name: eslint
+      glob: '*.{js,mjs,cjs,ts,tsx}'
+      run: pnpm exec eslint --fix --no-warn-ignored {staged_files}
+      stage_fixed: true
+
+    - name: prettier
+      run: pnpm exec prettier --write --ignore-unknown {staged_files}
+      stage_fixed: true
+
+    - name: typecheck
+      glob: '*.{ts,tsx,json}'
+      run: pnpm typecheck

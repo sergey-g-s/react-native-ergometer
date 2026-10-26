@@ -20,6 +20,9 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# personal git hooks overrides
+lefthook-local.yml
+
 # env
 .env
 .env.*
