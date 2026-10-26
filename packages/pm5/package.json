@@ -1,6 +1,6 @@
 {
   "name": "@ergometer/pm5",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Concept2 PM5 driver for react-native-ergometer",
   "license": "MIT",
   "repository": {
