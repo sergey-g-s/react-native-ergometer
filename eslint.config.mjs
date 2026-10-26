@@ -19,6 +19,10 @@ export default [
       // pnpm installs react only inside example/, so "detect" can't find it from the root.
       react: { version: examplePackage.dependencies.react },
     },
+    rules: {
+      // BLE protocols pack fields into bits.
+      'no-bitwise': 'off',
+    },
   },
   {
     files: ['**/*.js'],

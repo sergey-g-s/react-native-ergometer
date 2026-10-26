@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   fetchLatestPm5Firmware,
+  useErgScanner,
   type Pm5Firmware,
 } from 'react-native-ergometer';
 import {
@@ -39,6 +40,7 @@ function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const textStyle = isDarkMode ? styles.textDark : styles.textLight;
   const { state: firmwareState, reload: reloadFirmware } = useLatestFirmware();
+  const { devices, error: scanError } = useErgScanner();
 
   return (
     <SafeAreaProvider>
@@ -48,6 +50,19 @@ function App() {
       >
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={[styles.title, textStyle]}>react-native-ergometer</Text>
+          <Text style={[styles.subtitle, textStyle]}>Nearby machines</Text>
+          {scanError && <Text style={styles.error}>{scanError.message}</Text>}
+          {!scanError && devices.length === 0 && (
+            <Text style={textStyle}>Searching…</Text>
+          )}
+          {devices.map(device => (
+            <Text key={device.id} style={textStyle}>
+              {device.machineType ?? 'unknown'} ·{' '}
+              {device.serialNumber ?? device.name ?? device.id} ·{' '}
+              {device.rssi ?? '?'} dBm
+            </Text>
+          ))}
+
           <Text style={[styles.subtitle, textStyle]}>Latest PM5 firmware</Text>
           {firmwareState.status === 'loading' && (
             <Text style={textStyle}>Loading…</Text>
@@ -58,7 +73,7 @@ function App() {
           {firmwareState.status === 'loaded' &&
             firmwareState.firmware.map(item => (
               <Text key={item.monitor} style={textStyle}>
-                {item.machine} · hw {item.hardware} · {item.version} ·{' '}
+                {item.machineType} · hw {item.hardware} · {item.version} ·{' '}
                 {item.releaseDate}
               </Text>
             ))}
