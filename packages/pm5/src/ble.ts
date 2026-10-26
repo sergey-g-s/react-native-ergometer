@@ -12,6 +12,12 @@ export const PM5_INFO = {
   ergMachineType: 'ce060016-43e5-11e4-916c-0800200c9a66',
 };
 
+/** PM5 control service and the characteristic that receives CSAFE commands. */
+export const PM5_CONTROL = {
+  service: 'ce060020-43e5-11e4-916c-0800200c9a66',
+  command: 'ce060021-43e5-11e4-916c-0800200c9a66',
+};
+
 // Erg machine type codes from the PM5 device information service, grouped by machine.
 const ERG_MACHINE_TYPES: [MachineType, number[]][] = [
   ['row', [0, 1, 2, 3, 5, 7, 8, 16, 17, 18, 19, 20, 32, 224]],

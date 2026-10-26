@@ -56,12 +56,22 @@ jest.mock('react-native-ble-plx', () => ({
       };
       return { value: values[characteristic] ?? null };
     }
+    async writeCharacteristicWithResponseForDevice(
+      _id: string,
+      _service: string,
+      _characteristic: string,
+      value: string,
+    ) {
+      mockWrites.push(value);
+    }
     onDeviceDisconnected() {
       return { remove() {} };
     }
     async cancelDeviceConnection() {}
   },
 }));
+
+const mockWrites: string[] = [];
 
 const firmwareResponse = {
   data: [
@@ -148,4 +158,19 @@ test('connects to a machine and reads its info', async () => {
   await pressButton('Disconnect');
   expect(textLines()).not.toContain('machineType: ski');
   expect(textLines()).toContain('None');
+});
+
+test('starts a distance workout', async () => {
+  await renderApp();
+  await pressButton('Connect');
+
+  await pressButton('Start 2000 m');
+
+  expect(mockWrites).toHaveLength(6);
+  // F1 9C 9C F2: get error code
+  expect(mockWrites[0]).toBe('8Zyc8g==');
+  // F1 76 07 03 05 80 00 00 07 D0 20 F2: workout duration 2000 m
+  expect(mockWrites[2]).toBe('8XYHAwWAAAAH0CDy');
+
+  await pressButton('Disconnect');
 });

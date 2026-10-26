@@ -1,8 +1,9 @@
 import { PermissionsAndroid, Platform } from 'react-native';
 import { BleManager, State } from 'react-native-ble-plx';
 
-// Hermes has atob built in, but React Native's TypeScript types don't declare it.
+// Hermes has atob and btoa built in, but React Native's TypeScript types don't declare them.
 declare const atob: (data: string) => string;
+declare const btoa: (data: string) => string;
 
 let manager: BleManager | undefined;
 
@@ -19,6 +20,11 @@ export async function getReadyBleManager(): Promise<BleManager> {
 /** Decodes a base64 value from react-native-ble-plx into bytes. */
 export function base64ToBytes(value: string): Uint8Array {
   return Uint8Array.from(atob(value), char => char.charCodeAt(0));
+}
+
+/** Encodes bytes as the base64 value react-native-ble-plx writes. */
+export function bytesToBase64(bytes: number[]): string {
+  return btoa(String.fromCharCode(...bytes));
 }
 
 /** Reads an ASCII string characteristic, dropping trailing NUL padding. */

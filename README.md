@@ -2,7 +2,7 @@
 
 React Native library for connecting to fitness ergometers over Bluetooth Low Energy (BLE).
 
-> **Status:** early development, not published to npm yet. Scanning for and connecting to PM5 monitors works; workouts are not ready.
+> **Status:** early development, not published to npm yet. Scanning, connecting and starting a distance workout on PM5 monitors works.
 
 ## Goals
 
@@ -40,6 +40,14 @@ const pm5 = await connectDevice(device);
 // { id, name, serialNumber: '430045867', machineType: 'row', firmwareVersion: '37.000', hardwareRevision: '340', isConnected: true }
 pm5.onDisconnect(error => {});
 await pm5.disconnect();
+```
+
+### `connection.startWorkout({ distance })`
+
+Programs a fixed-distance workout (meters, at least 100) and opens its screen on the PM5, ready to row.
+
+```ts
+await pm5.startWorkout({ distance: 2000 });
 ```
 
 ### `useErgConnection(deviceId)` / `useErgConnections()`
