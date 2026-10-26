@@ -35,7 +35,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "bob build",
-    "prepack": "bob build",
+    "prepack": "cp ../../LICENSE . && bob build",
     "typecheck": "tsc --noEmit"
   },
   "react-native-builder-bob": {

@@ -3,6 +3,10 @@ node_modules/
 
 # build output
 packages/*/lib/
+
+# copied from the root on pack
+packages/*/LICENSE
+packages/react-native/README.md
 dist/
 *.tsbuildinfo
 *.tgz
