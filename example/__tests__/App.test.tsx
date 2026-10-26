@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Button, Text } from 'react-native';
+import { Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import App from '../App';
 
@@ -113,12 +113,18 @@ function textLines() {
     .map(node => [node.props.children].flat().join(''));
 }
 
-async function pressButton(title: string) {
-  const button = renderer?.root
-    .findAllByType(Button)
-    .find(node => node.props.title === title);
+async function press(title: string) {
+  // Pressable is a memo component, so findAllByType can't match it; look for anything pressable instead.
+  const [target] =
+    renderer?.root.findAll(
+      node =>
+        typeof node.props.onPress === 'function' &&
+        node
+          .findAllByType(Text)
+          .some(text => [text.props.children].flat().join('') === title),
+    ) ?? [];
   await ReactTestRenderer.act(async () => {
-    button?.props.onPress();
+    target?.props.onPress();
     await new Promise<void>(resolve => setTimeout(resolve, 0));
   });
 }
@@ -128,43 +134,56 @@ afterEach(async () => {
   jest.useRealTimers();
 });
 
-test('renders nearby machines and the latest firmware', async () => {
+const connectedCard = 'SN 431861503 · fw 917.069';
+
+test('renders nearby machines', async () => {
   await renderApp();
 
-  expect(textLines()).toContain('ski · 431861503 · -60 dBm');
-  expect(textLines()).toContain('row · hw 6 · 459.069 · 2026-06-27');
+  expect(textLines()).toContain('431861503');
+  expect(textLines()).toContain('-60 dBm');
+});
+
+test('renders the latest firmware', async () => {
+  await renderApp();
+
+  await press('Firmware');
+
+  expect(textLines()).toContain('hw 6 · 2026-06-27');
+  expect(textLines()).toContain('459.069');
 });
 
 test('drops a machine that stops advertising', async () => {
   jest.useFakeTimers();
   await renderApp();
-  expect(textLines()).toContain('ski · 431861503 · -60 dBm');
+  expect(textLines()).toContain('431861503');
 
   await ReactTestRenderer.act(async () => {
     jest.advanceTimersByTime(11_000);
   });
 
-  expect(textLines()).not.toContain('ski · 431861503 · -60 dBm');
+  expect(textLines()).not.toContain('431861503');
   expect(textLines()).toContain('Searching…');
 });
 
 test('connects to a machine and reads its info', async () => {
   await renderApp();
 
-  await pressButton('Connect');
-  expect(textLines()).toContain('machineType: ski');
-  expect(textLines()).toContain('firmwareVersion: 917.069');
+  await press('Connect');
+  await press(connectedCard);
+  expect(textLines()).toContain('ski');
+  expect(textLines()).toContain('917.069');
 
-  await pressButton('Disconnect');
-  expect(textLines()).not.toContain('machineType: ski');
+  await press('Disconnect');
+  expect(textLines()).not.toContain('917.069');
   expect(textLines()).toContain('None');
 });
 
 test('starts a distance workout', async () => {
   await renderApp();
-  await pressButton('Connect');
+  await press('Connect');
+  await press(connectedCard);
 
-  await pressButton('Start 2000 m');
+  await press('Start');
 
   expect(mockWrites).toHaveLength(6);
   // F1 9C 9C F2: get error code
@@ -172,5 +191,5 @@ test('starts a distance workout', async () => {
   // F1 76 07 03 05 80 00 00 07 D0 20 F2: workout duration 2000 m
   expect(mockWrites[2]).toBe('8XYHAwWAAAAH0CDy');
 
-  await pressButton('Disconnect');
+  await press('Disconnect');
 });
