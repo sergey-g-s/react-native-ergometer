@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import App from '../App';
 
@@ -114,13 +114,15 @@ function textLines() {
 }
 
 async function press(title: string) {
-  const target = renderer?.root
-    .findAllByType(Pressable)
-    .find(node =>
-      node
-        .findAllByType(Text)
-        .some(text => [text.props.children].flat().join('') === title),
-    );
+  // Pressable is a memo component, so findAllByType can't match it; look for anything pressable instead.
+  const [target] =
+    renderer?.root.findAll(
+      node =>
+        typeof node.props.onPress === 'function' &&
+        node
+          .findAllByType(Text)
+          .some(text => [text.props.children].flat().join('') === title),
+    ) ?? [];
   await ReactTestRenderer.act(async () => {
     target?.props.onPress();
     await new Promise<void>(resolve => setTimeout(resolve, 0));
