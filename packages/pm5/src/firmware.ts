@@ -1,12 +1,11 @@
-const FIRMWARE_URL = 'https://tech.concept2.com/api/firmware/latest/public';
+import type { MachineType } from '@ergometer/core';
 
-export type Pm5Machine =
-  'rower' | 'skierg' | 'bike' | 'strengtherg' | (string & {});
+const FIRMWARE_URL = 'https://tech.concept2.com/api/firmware/latest/public';
 
 /** Latest public firmware for one PM5 hardware revision on one machine type. */
 export interface Pm5Firmware {
   monitor: string;
-  machine: Pm5Machine;
+  machineType: MachineType;
   hardware: number;
   majorVersion: number;
   minorVersion: number;
@@ -17,7 +16,7 @@ export interface Pm5Firmware {
 }
 
 export interface FetchLatestPm5FirmwareOptions {
-  machine?: Pm5Machine;
+  machineType?: MachineType;
 }
 
 /** Thrown when the latest firmware list can't be fetched or parsed. */
@@ -43,7 +42,7 @@ interface RawFirmware {
   release_date: string;
 }
 
-/** Fetches the latest public PM5 firmware, one entry per hardware revision and machine. */
+/** Fetches the latest public PM5 firmware, one entry per hardware revision and machine type. */
 export async function fetchLatestPm5Firmware(
   options: FetchLatestPm5FirmwareOptions = {},
 ): Promise<Pm5Firmware[]> {
@@ -86,12 +85,24 @@ export async function fetchLatestPm5Firmware(
     );
   }
 
-  const wantedMachine = options.machine?.toLowerCase();
+  const wantedType = options.machineType?.toLowerCase();
   return items
     .filter(isRawFirmware)
     .filter(item => item.pm === 5)
     .map(toPm5Firmware)
-    .filter(item => !wantedMachine || item.machine === wantedMachine);
+    .filter(item => !wantedType || item.machineType === wantedType);
+}
+
+const API_MACHINE_TYPES: Record<string, MachineType> = {
+  rower: 'row',
+  skierg: 'ski',
+  bike: 'bike',
+  strengtherg: 'strength',
+};
+
+function toMachineType(apiMachine: string): MachineType {
+  const machine = apiMachine.toLowerCase();
+  return API_MACHINE_TYPES[machine] ?? machine;
 }
 
 function isRawFirmware(value: unknown): value is RawFirmware {
@@ -115,7 +126,7 @@ function isRawFirmware(value: unknown): value is RawFirmware {
 function toPm5Firmware(item: RawFirmware): Pm5Firmware {
   return {
     monitor: item.monitor.toLowerCase(),
-    machine: item.machine.toLowerCase(),
+    machineType: toMachineType(item.machine),
     hardware: item.hardware,
     majorVersion: item.major_version,
     minorVersion: item.minor_version,
