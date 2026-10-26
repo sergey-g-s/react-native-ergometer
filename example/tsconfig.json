@@ -1,0 +1,8 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "customConditions": ["@ergometer/source", "react-native"]
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["**/node_modules", "**/Pods", "vendor"]
+}

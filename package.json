@@ -13,6 +13,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "example": "pnpm --filter react-native-ergometer-example",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "changeset": "changeset",
