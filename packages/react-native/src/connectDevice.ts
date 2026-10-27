@@ -102,7 +102,6 @@ export class Pm5Connection implements ErgConnection {
           this.stroke = NO_STROKE_DATA;
           this.additionalStroke = NO_STROKE_DATA;
         }
-        // Keep the last summary through the wait after a workout: the PM5 revises it a minute later.
         if (state === 'working' && previousState !== 'working') {
           this.summary = null;
           this.summary2 = null;
