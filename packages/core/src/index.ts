@@ -12,9 +12,20 @@ export interface ErgDevice {
   serialNumber: string | null;
 }
 
-/** A workout to program on the machine: a distance in meters, a duration in seconds or calories to burn. */
+/**
+ * One interval of an interval workout: a distance in meters, a duration in seconds or calories to burn.
+ * `rest` is the rest after it in seconds. Left out, the rest lasts until you call `continueWorkout()`.
+ */
+export type Interval = (
+  { distance: number } | { duration: number } | { calories: number }
+) & { rest?: number };
+
+/** A workout to program on the machine: a distance in meters, a duration in seconds, calories to burn or a list of intervals. */
 export type Workout =
-  { distance: number } | { duration: number } | { calories: number };
+  | { distance: number }
+  | { duration: number }
+  | { calories: number }
+  | { intervals: Interval[] };
 
 export type WorkoutType =
   'justRow' | 'distance' | 'time' | 'calories' | 'wattMinutes' | 'interval';
@@ -65,6 +76,12 @@ export interface WorkoutData {
   projectedTime: number;
   /** Projected total workout distance at the current effort, in meters. */
   projectedDistance: number;
+  /** Interval count as the monitor reports it; stays 0 outside interval workouts. */
+  intervalCount: number;
+  /** Rest time the monitor reports, in seconds. */
+  restTime: number;
+  /** Rest distance the monitor reports, in meters. */
+  restDistance: number;
 }
 
 /** Final numbers a machine reports when a workout ends. Units match `WorkoutData`. */
@@ -84,6 +101,12 @@ export interface WorkoutSummary {
   calories: number;
   /** Average watts. */
   averagePower: number;
+  /** Splits or intervals the workout was divided into. */
+  intervalCount: number;
+  /** Meters rowed during rest. */
+  totalRestDistance: number;
+  /** Rest time between intervals, in seconds. */
+  restTime: number;
 }
 
 /** An open connection to a machine. Once it closes, connect again to get a new one. */
@@ -96,6 +119,8 @@ export interface ErgConnection {
   readonly firmwareVersion: string | null;
   readonly isConnected: boolean;
   startWorkout(workout: Workout): Promise<void>;
+  /** Ends a rest that has no set length and starts the next interval. Needs a firmware that supports the continue key. */
+  continueWorkout(): Promise<void>;
   /** Calls the listener with the latest readings as the machine reports them. */
   onWorkoutData(listener: (data: WorkoutData) => void): () => void;
   /** Calls the listener with the final numbers when a workout ends. */

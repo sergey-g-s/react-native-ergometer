@@ -47,9 +47,18 @@ export type GeneralStatus = Pick<
 >;
 export type AdditionalStatus1 = Pick<
   WorkoutData,
-  'speed' | 'strokeRate' | 'heartRate' | 'pace' | 'averagePace'
+  | 'speed'
+  | 'strokeRate'
+  | 'heartRate'
+  | 'pace'
+  | 'averagePace'
+  | 'restDistance'
+  | 'restTime'
 >;
-export type AdditionalStatus2 = Pick<WorkoutData, 'power' | 'calories'>;
+export type AdditionalStatus2 = Pick<
+  WorkoutData,
+  'power' | 'calories' | 'intervalCount'
+>;
 export type StrokeData = Pick<
   WorkoutData,
   | 'strokeCount'
@@ -82,13 +91,17 @@ export const NO_STROKE_DATA: StrokeData & AdditionalStrokeData = {
   projectedDistance: 0,
 };
 
-export type EndOfWorkoutSummary = Omit<
-  WorkoutSummary,
-  'calories' | 'averagePower'
->;
 export type EndOfWorkoutSummary2 = Pick<
   WorkoutSummary,
-  'calories' | 'averagePower'
+  | 'calories'
+  | 'averagePower'
+  | 'intervalCount'
+  | 'totalRestDistance'
+  | 'restTime'
+>;
+export type EndOfWorkoutSummary = Omit<
+  WorkoutSummary,
+  keyof EndOfWorkoutSummary2
 >;
 
 /** Reads the PM5 general status notification (19 bytes). */
@@ -119,6 +132,8 @@ export function parseAdditionalStatus1(
     heartRate: heartRate(bytes[6]!),
     pace: uint16(bytes, 7) / 100,
     averagePace: uint16(bytes, 9) / 100,
+    restDistance: uint16(bytes, 11),
+    restTime: uint24(bytes, 13) / 100,
   };
 }
 
@@ -130,6 +145,7 @@ export function parseAdditionalStatus2(
     return null;
   }
   return {
+    intervalCount: bytes[3]!,
     power: uint16(bytes, 4),
     calories: uint16(bytes, 6),
   };
@@ -197,8 +213,11 @@ export function parseEndOfWorkoutSummary2(
     return null;
   }
   return {
+    intervalCount: bytes[7]!,
     calories: uint16(bytes, 8),
     averagePower: uint16(bytes, 10),
+    totalRestDistance: uint24(bytes, 12),
+    restTime: uint16(bytes, 15),
   };
 }
 

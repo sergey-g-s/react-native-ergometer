@@ -59,6 +59,9 @@ export function liveMetrics(data: WorkoutData): Metric[] {
     ['Work per stroke', `${data.workPerStroke.toFixed(1)} J`],
     ['Projected time', clock(data.projectedTime)],
     ['Projected distance', `${data.projectedDistance} m`],
+    ['Interval count', String(data.intervalCount)],
+    ['Rest time', clock(data.restTime)],
+    ['Rest distance', `${data.restDistance} m`],
   ];
 }
 
@@ -72,6 +75,9 @@ export function summaryMetrics(summary: WorkoutSummary): Metric[] {
     ['Avg stroke rate', `${summary.averageStrokeRate} spm`],
     ['Calories', `${summary.calories} cal`],
     ['Drag factor', String(summary.dragFactor)],
+    ['Interval count', String(summary.intervalCount)],
+    ['Total rest distance', `${summary.totalRestDistance} m`],
+    ['Rest time', clock(summary.restTime)],
     ['Avg heart rate', bpm(summary.averageHeartRate)],
     ['Min heart rate', bpm(summary.minHeartRate)],
     ['Max heart rate', bpm(summary.maxHeartRate)],
