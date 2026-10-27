@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useErgConnections } from 'react-native-ergometer';
+import {
+  useErgConnections,
+  type WorkoutData,
+  type WorkoutSummary,
+} from 'react-native-ergometer';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { AppButton, ErrorBanner, Screen, Section } from '../components';
+import {
+  AppButton,
+  ErrorBanner,
+  MetricGrid,
+  Screen,
+  Section,
+} from '../components';
+import { liveMetrics, summaryMetrics } from '../metrics';
 import type { RootStackParamList } from '../navigation';
 import { useStyles } from '../styles';
 
@@ -16,12 +27,26 @@ export function MachineScreen({
   );
   const [distance, setDistance] = useState('2000');
   const [workoutError, setWorkoutError] = useState<string | null>(null);
+  const [data, setData] = useState<WorkoutData | null>(null);
+  const [summary, setSummary] = useState<WorkoutSummary | null>(null);
 
   useEffect(() => {
     if (!connection) {
       navigation.goBack();
     }
   }, [connection, navigation]);
+
+  useEffect(() => {
+    if (!connection) {
+      return;
+    }
+    const stopData = connection.onWorkoutData(setData);
+    const stopEnd = connection.onWorkoutEnd(setSummary);
+    return () => {
+      stopData();
+      stopEnd();
+    };
+  }, [connection]);
 
   if (!connection) {
     return null;
@@ -83,6 +108,7 @@ export function MachineScreen({
                 disabled={!Number.isInteger(meters) || meters <= 0}
                 onPress={() => {
                   setWorkoutError(null);
+                  setSummary(null);
                   connection
                     .startWorkout({ distance: meters })
                     .catch((error: unknown) => setWorkoutError(String(error)));
@@ -92,6 +118,18 @@ export function MachineScreen({
             {workoutError && <ErrorBanner message={workoutError} />}
           </View>
         </Section>
+
+        {data && (
+          <Section title="Live data">
+            <MetricGrid metrics={liveMetrics(data)} />
+          </Section>
+        )}
+
+        {summary && (
+          <Section title="Workout summary">
+            <MetricGrid metrics={summaryMetrics(summary)} />
+          </Section>
+        )}
 
         <Section title="Device info">
           <View style={styles.card}>

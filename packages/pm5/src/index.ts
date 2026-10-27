@@ -2,3 +2,4 @@
 export * from './ble';
 export * from './csafe';
 export * from './firmware';
+export * from './workout';

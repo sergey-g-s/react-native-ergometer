@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
+import type { Metric } from './metrics';
 import { useStyles } from './styles';
 import type { Theme } from './theme';
 
@@ -95,6 +96,21 @@ export function Section({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       {children}
+    </View>
+  );
+}
+
+export function MetricGrid({ metrics }: { metrics: Metric[] }) {
+  const { styles } = useStyles();
+
+  return (
+    <View style={styles.grid}>
+      {metrics.map(([label, value]) => (
+        <View key={label} style={[styles.card, styles.tile]}>
+          <Text style={styles.tileLabel}>{label}</Text>
+          <Text style={styles.tileValue}>{value}</Text>
+        </View>
+      ))}
     </View>
   );
 }

@@ -1,10 +1,32 @@
-import type { ErgConnection, ErgDevice, Workout } from '@ergometer/core';
+import type {
+  ErgConnection,
+  ErgDevice,
+  Workout,
+  WorkoutData,
+  WorkoutSummary,
+} from '@ergometer/core';
 import {
   PM5_CONTROL,
   PM5_INFO,
+  PM5_ROWING,
   distanceWorkoutFrames,
+  NO_STROKE_DATA,
+  parseAdditionalStatus1,
+  parseAdditionalStatus2,
+  parseAdditionalStrokeData,
+  parseEndOfWorkoutSummary,
+  parseEndOfWorkoutSummary2,
   parseErgMachineType,
+  parseGeneralStatus,
   parsePm5FirmwareVersion,
+  parseStrokeData,
+  type AdditionalStatus1,
+  type AdditionalStatus2,
+  type AdditionalStrokeData,
+  type EndOfWorkoutSummary,
+  type EndOfWorkoutSummary2,
+  type GeneralStatus,
+  type StrokeData,
 } from '@ergometer/pm5';
 import type { BleError, BleManager, Subscription } from 'react-native-ble-plx';
 import {
@@ -47,7 +69,17 @@ export class Pm5Connection implements ErgConnection {
   readonly firmwareVersion: string | null;
   private readonly bleManager: BleManager;
   private readonly subscription: Subscription;
+  private readonly workoutSubscriptions: Subscription[];
   private readonly listeners = new Set<(error: Error | null) => void>();
+  private readonly dataListeners = new Set<(data: WorkoutData) => void>();
+  private readonly endListeners = new Set<(summary: WorkoutSummary) => void>();
+  private general: GeneralStatus | null = null;
+  private additional1: AdditionalStatus1 | null = null;
+  private additional2: AdditionalStatus2 | null = null;
+  private stroke: StrokeData = NO_STROKE_DATA;
+  private additionalStroke: AdditionalStrokeData = NO_STROKE_DATA;
+  private summary: EndOfWorkoutSummary | null = null;
+  private summary2: EndOfWorkoutSummary2 | null = null;
   private connected = true;
 
   constructor(bleManager: BleManager, details: Pm5Details) {
@@ -61,6 +93,48 @@ export class Pm5Connection implements ErgConnection {
     this.subscription = bleManager.onDeviceDisconnected(this.id, error =>
       this.handleDisconnect(error),
     );
+    this.workoutSubscriptions = [
+      this.monitor(PM5_ROWING.generalStatus, bytes => {
+        const previousState = this.general?.workoutState;
+        this.general = parseGeneralStatus(bytes) ?? this.general;
+        const state = this.general?.workoutState;
+        if (state === 'waiting') {
+          this.stroke = NO_STROKE_DATA;
+          this.additionalStroke = NO_STROKE_DATA;
+        }
+        // Keep the last summary through the wait after a workout: the PM5 revises it a minute later.
+        if (state === 'working' && previousState !== 'working') {
+          this.summary = null;
+          this.summary2 = null;
+        }
+        this.emitData();
+      }),
+      this.monitor(PM5_ROWING.additionalStatus1, bytes => {
+        this.additional1 = parseAdditionalStatus1(bytes) ?? this.additional1;
+        this.emitData();
+      }),
+      this.monitor(PM5_ROWING.additionalStatus2, bytes => {
+        this.additional2 = parseAdditionalStatus2(bytes) ?? this.additional2;
+        this.emitData();
+      }),
+      this.monitor(PM5_ROWING.strokeData, bytes => {
+        this.stroke = parseStrokeData(bytes) ?? this.stroke;
+        this.emitData();
+      }),
+      this.monitor(PM5_ROWING.additionalStrokeData, bytes => {
+        this.additionalStroke =
+          parseAdditionalStrokeData(bytes) ?? this.additionalStroke;
+        this.emitData();
+      }),
+      this.monitor(PM5_ROWING.endOfWorkoutSummary, bytes => {
+        this.summary = parseEndOfWorkoutSummary(bytes) ?? this.summary;
+        this.emitEnd();
+      }),
+      this.monitor(PM5_ROWING.endOfWorkoutSummary2, bytes => {
+        this.summary2 = parseEndOfWorkoutSummary2(bytes) ?? this.summary2;
+        this.emitEnd();
+      }),
+    ];
   }
 
   get isConnected(): boolean {
@@ -82,6 +156,20 @@ export class Pm5Connection implements ErgConnection {
     }
   }
 
+  onWorkoutData(listener: (data: WorkoutData) => void): () => void {
+    this.dataListeners.add(listener);
+    return () => {
+      this.dataListeners.delete(listener);
+    };
+  }
+
+  onWorkoutEnd(listener: (summary: WorkoutSummary) => void): () => void {
+    this.endListeners.add(listener);
+    return () => {
+      this.endListeners.delete(listener);
+    };
+  }
+
   async disconnect(): Promise<void> {
     if (!this.connected) {
       return;
@@ -97,12 +185,50 @@ export class Pm5Connection implements ErgConnection {
     };
   }
 
+  private monitor(
+    characteristic: string,
+    handle: (bytes: Uint8Array) => void,
+  ): Subscription {
+    return this.bleManager.monitorCharacteristicForDevice(
+      this.id,
+      PM5_ROWING.service,
+      characteristic,
+      (error, result) => {
+        if (!error && result?.value) {
+          handle(base64ToBytes(result.value));
+        }
+      },
+    );
+  }
+
+  // Each status packet holds part of the readings; listeners hear once all three have arrived.
+  private emitData() {
+    if (this.general && this.additional1 && this.additional2) {
+      const data = {
+        ...this.general,
+        ...this.additional1,
+        ...this.additional2,
+        ...this.stroke,
+        ...this.additionalStroke,
+      };
+      this.dataListeners.forEach(listener => listener(data));
+    }
+  }
+
+  private emitEnd() {
+    if (this.summary && this.summary2) {
+      const summary = { ...this.summary, ...this.summary2 };
+      this.endListeners.forEach(listener => listener(summary));
+    }
+  }
+
   private handleDisconnect(bleError: BleError | null) {
     if (!this.connected) {
       return;
     }
     this.connected = false;
     this.subscription.remove();
+    this.workoutSubscriptions.forEach(subscription => subscription.remove());
     const error = bleError
       ? new ConnectionError('Connection lost', { cause: bleError })
       : null;
