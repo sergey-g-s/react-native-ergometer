@@ -9,7 +9,7 @@ import {
   PM5_CONTROL,
   PM5_INFO,
   PM5_ROWING,
-  distanceWorkoutFrames,
+  workoutFrames,
   NO_STROKE_DATA,
   parseAdditionalStatus1,
   parseAdditionalStatus2,
@@ -140,12 +140,12 @@ export class Pm5Connection implements ErgConnection {
     return this.connected;
   }
 
-  /** Programs a fixed-distance workout and opens its screen on the PM5, ready to row. */
+  /** Programs a fixed distance, time or calories workout and opens its screen on the PM5, ready to row. */
   async startWorkout(workout: Workout): Promise<void> {
     if (!this.connected) {
       throw new ConnectionError('PM5 is not connected');
     }
-    for (const frame of distanceWorkoutFrames(workout.distance)) {
+    for (const frame of workoutFrames(workout)) {
       await this.bleManager.writeCharacteristicWithResponseForDevice(
         this.id,
         PM5_CONTROL.service,

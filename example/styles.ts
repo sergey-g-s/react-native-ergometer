@@ -117,6 +117,30 @@ function createStyles(theme: Theme) {
       fontSize: 13,
       color: theme.text,
     },
+    segments: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 4,
+      overflow: 'hidden',
+    },
+    segment: {
+      flex: 1,
+      minHeight: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    segmentSelected: {
+      backgroundColor: theme.accentSoft,
+    },
+    segmentLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.muted,
+    },
+    segmentLabelSelected: {
+      color: theme.accent,
+    },
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',

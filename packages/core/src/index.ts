@@ -12,10 +12,9 @@ export interface ErgDevice {
   serialNumber: string | null;
 }
 
-/** A workout to program on the machine. Distance is in meters. */
-export interface Workout {
-  distance: number;
-}
+/** A workout to program on the machine: a distance in meters, a duration in seconds or calories to burn. */
+export type Workout =
+  { distance: number } | { duration: number } | { calories: number };
 
 export type WorkoutType =
   'justRow' | 'distance' | 'time' | 'calories' | 'wattMinutes' | 'interval';

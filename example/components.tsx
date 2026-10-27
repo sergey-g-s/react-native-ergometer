@@ -100,6 +100,44 @@ export function Section({
   );
 }
 
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const { styles } = useStyles();
+
+  return (
+    <View style={styles.segments}>
+      {options.map(option => {
+        const selected = option.value === value;
+        return (
+          <Pressable
+            key={option.value}
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(option.value)}
+            style={[styles.segment, selected && styles.segmentSelected]}
+          >
+            <Text
+              style={[
+                styles.segmentLabel,
+                selected && styles.segmentLabelSelected,
+              ]}
+            >
+              {option.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function MetricGrid({ metrics }: { metrics: Metric[] }) {
   const { styles } = useStyles();
 
