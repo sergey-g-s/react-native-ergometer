@@ -1,5 +1,17 @@
 # react-native-ergometer
 
+## 0.2.0
+
+### Minor Changes
+
+- 2dbdfab: Add `onWorkoutData` and `onWorkoutEnd` to read live readings and the final summary from a connected PM5
+- a481b4f: Add time and calories workouts: `startWorkout({ duration })` in seconds and `startWorkout({ calories })`. `distanceWorkoutFrames` is replaced by `workoutFrames`
+
+### Patch Changes
+
+- @ergometer/core@0.2.0
+  - @ergometer/pm5@0.2.0
+
 ## 0.1.0
 
 ### Minor Changes
