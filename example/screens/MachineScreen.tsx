@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   useErgConnections,
+  type Workout,
   type WorkoutData,
   type WorkoutSummary,
 } from 'react-native-ergometer';
@@ -12,10 +13,43 @@ import {
   MetricGrid,
   Screen,
   Section,
+  SegmentedControl,
 } from '../components';
 import { liveMetrics, summaryMetrics } from '../metrics';
 import type { RootStackParamList } from '../navigation';
 import { useStyles } from '../styles';
+
+type WorkoutKind = 'distance' | 'time' | 'calories';
+
+const WORKOUT_KINDS: {
+  value: WorkoutKind;
+  label: string;
+  input: string;
+  initial: string;
+  build: (amount: number) => Workout;
+}[] = [
+  {
+    value: 'distance',
+    label: 'Distance',
+    input: 'Distance, m',
+    initial: '2000',
+    build: distance => ({ distance }),
+  },
+  {
+    value: 'time',
+    label: 'Time',
+    input: 'Time, min',
+    initial: '20',
+    build: minutes => ({ duration: minutes * 60 }),
+  },
+  {
+    value: 'calories',
+    label: 'Calories',
+    input: 'Calories, cal',
+    initial: '100',
+    build: calories => ({ calories }),
+  },
+];
 
 export function MachineScreen({
   navigation,
@@ -25,7 +59,8 @@ export function MachineScreen({
   const connection = useErgConnections().find(
     item => item.id === route.params.id,
   );
-  const [distance, setDistance] = useState('2000');
+  const [kind, setKind] = useState<WorkoutKind>('distance');
+  const [amount, setAmount] = useState('2000');
   const [workoutError, setWorkoutError] = useState<string | null>(null);
   const [data, setData] = useState<WorkoutData | null>(null);
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
@@ -60,7 +95,8 @@ export function MachineScreen({
     ['hardwareRevision', connection.hardwareRevision ?? '—'],
     ['isConnected', String(connection.isConnected)],
   ];
-  const meters = Number(distance);
+  const workoutKind = WORKOUT_KINDS.find(item => item.value === kind)!;
+  const quantity = Number(amount);
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -93,24 +129,35 @@ export function MachineScreen({
 
         <Section title="Workouts">
           <View style={[styles.card, styles.cardBody]}>
-            <Text style={styles.inputLabel}>Distance, m</Text>
+            <SegmentedControl
+              options={WORKOUT_KINDS}
+              value={kind}
+              onChange={next => {
+                setKind(next);
+                setAmount(
+                  WORKOUT_KINDS.find(item => item.value === next)!.initial,
+                );
+                setWorkoutError(null);
+              }}
+            />
+            <Text style={styles.inputLabel}>{workoutKind.input}</Text>
             <View style={styles.inputRow}>
               <TextInput
-                accessibilityLabel="Distance in meters"
+                accessibilityLabel={workoutKind.input}
                 keyboardType="number-pad"
-                value={distance}
-                onChangeText={setDistance}
+                value={amount}
+                onChangeText={setAmount}
                 placeholderTextColor={theme.muted}
                 style={styles.input}
               />
               <AppButton
                 title="Start"
-                disabled={!Number.isInteger(meters) || meters <= 0}
+                disabled={!Number.isInteger(quantity) || quantity <= 0}
                 onPress={() => {
                   setWorkoutError(null);
                   setSummary(null);
                   connection
-                    .startWorkout({ distance: meters })
+                    .startWorkout(workoutKind.build(quantity))
                     .catch((error: unknown) => setWorkoutError(String(error)));
                 }}
               />
