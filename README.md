@@ -1,6 +1,6 @@
 # react-native-ergometer
 
-React Native library for Concept2 PM5 performance monitors over Bluetooth Low Energy. Find nearby monitors, connect to one or several at once, read what they report about themselves and start a workout from your app.
+React Native library for Concept2 PM5 performance monitors over Bluetooth Low Energy. Find nearby monitors, connect to one or several at once, read what they report about themselves, start a workout from your app and follow it live.
 
 Built on [react-native-ble-plx](https://github.com/dotintent/react-native-ble-plx). Support for machines that use the standard Fitness Machine Service (FTMS) is planned.
 
@@ -11,7 +11,9 @@ Built on [react-native-ble-plx](https://github.com/dotintent/react-native-ble-pl
 - Scan for PM5 monitors, with machine type (row, ski, bike) and serial number.
 - Connect to several monitors at once; connections stay open across screens.
 - Read serial number, machine type, firmware version and hardware revision after connecting.
-- Start a fixed-distance workout on the monitor.
+- Start a fixed distance, time or calories workout on the monitor.
+- Live data during a workout: time, distance, pace, power, stroke rate, heart rate, calories and per-stroke readings.
+- The final numbers when a workout ends.
 - Fetch the latest public PM5 firmware from Concept2.
 
 ## Requirements
@@ -106,17 +108,19 @@ The connection stays open until you call `disconnect()` or the monitor goes away
 
 #### `Pm5Connection`
 
-| Member                   | Description                                                                                                               |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `id`, `name`             | Same as the scanned device.                                                                                               |
-| `serialNumber`           | Reported by the monitor.                                                                                                  |
-| `machineType`            | Reported by the monitor, so it's exact even when the scan guessed.                                                        |
-| `firmwareVersion`        | E.g. `37.000`, the same format as `version` from `fetchLatestPm5Firmware`.                                                |
-| `hardwareRevision`       | As reported by the monitor, e.g. `340`.                                                                                   |
-| `isConnected`            | `false` once the connection closes. A closed connection can't be reused; call `connectDevice` again.                      |
-| `startWorkout(workout)`  | See [Workouts](#workouts).                                                                                                |
-| `disconnect()`           | Closes the connection.                                                                                                    |
-| `onDisconnect(listener)` | Called with `ConnectionError` when the connection drops, or `null` after `disconnect()`. Returns an unsubscribe function. |
+| Member                    | Description                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `id`, `name`              | Same as the scanned device.                                                                                               |
+| `serialNumber`            | Reported by the monitor.                                                                                                  |
+| `machineType`             | Reported by the monitor, so it's exact even when the scan guessed.                                                        |
+| `firmwareVersion`         | E.g. `37.000`, the same format as `version` from `fetchLatestPm5Firmware`.                                                |
+| `hardwareRevision`        | As reported by the monitor, e.g. `340`.                                                                                   |
+| `isConnected`             | `false` once the connection closes. A closed connection can't be reused; call `connectDevice` again.                      |
+| `startWorkout(workout)`   | See [Workouts](#workouts).                                                                                                |
+| `onWorkoutData(listener)` | See [Live data](#live-data).                                                                                              |
+| `onWorkoutEnd(listener)`  | See [Workout summary](#workout-summary).                                                                                  |
+| `disconnect()`            | Closes the connection.                                                                                                    |
+| `onDisconnect(listener)`  | Called with `ConnectionError` when the connection drops, or `null` after `disconnect()`. Returns an unsubscribe function. |
 
 #### `useErgConnection(deviceId)`
 
@@ -132,13 +136,96 @@ The same data outside React: the current connections, and a subscription that fi
 
 ### Workouts
 
-#### `connection.startWorkout({ distance })`
+#### `connection.startWorkout(workout)`
 
-Programs a fixed-distance workout on the monitor and opens its workout screen, ready to start. `distance` is in meters, a whole number of at least 100; anything else throws `RangeError`. Splits are set to the distance rounded down to 100 m.
+Programs a fixed workout on the monitor and opens its workout screen, ready to start. Pass one of:
+
+| Workout                | Unit     | Accepted values                            | Splits                                  |
+| ---------------------- | -------- | ------------------------------------------ | --------------------------------------- |
+| `{ distance: number }` | meters   | A whole number, at least 100.              | The distance rounded down to 100 m.     |
+| `{ duration: number }` | seconds  | A whole number from 20 to 35999 (9:59:59). | The whole duration, at most 90 minutes. |
+| `{ calories: number }` | calories | A whole number from 5 to 65535.            | The whole amount.                       |
+
+A value outside the range throws `RangeError`; a lost connection throws `ConnectionError`. Subscribe to [live data](#live-data) before you start to see the workout from its first stroke.
 
 ```ts
 await pm5.startWorkout({ distance: 2000 });
+await pm5.startWorkout({ duration: 20 * 60 });
+await pm5.startWorkout({ calories: 100 });
 ```
+
+### Live data
+
+#### `connection.onWorkoutData(listener)`
+
+Calls `listener` with the latest readings each time the monitor reports them, about twice a second. Returns an unsubscribe function. The first call comes once the monitor has sent every status packet, and readings keep arriving between workouts, as zeros.
+
+```tsx
+useEffect(() => {
+  const stopData = pm5.onWorkoutData(setData);
+  const stopEnd = pm5.onWorkoutEnd(setSummary);
+  return () => {
+    stopData();
+    stopEnd();
+  };
+}, [pm5]);
+```
+
+`WorkoutData`:
+
+| Field               | Type                   | Notes                                                                                  |
+| ------------------- | ---------------------- | -------------------------------------------------------------------------------------- |
+| `workoutType`       | `WorkoutType \| null`  | `'justRow' \| 'distance' \| 'time' \| 'calories' \| 'wattMinutes' \| 'interval'`.      |
+| `workoutState`      | `WorkoutState \| null` | `'waiting' \| 'working' \| 'rest' \| 'ended'`.                                         |
+| `target`            | `number \| null`       | What the workout runs to: meters, seconds, calories or watt-minutes, by `workoutType`. |
+| `elapsedTime`       | `number`               | Seconds.                                                                               |
+| `distance`          | `number`               | Meters.                                                                                |
+| `speed`             | `number`               | Meters per second.                                                                     |
+| `pace`              | `number`               | Seconds per 500 m.                                                                     |
+| `averagePace`       | `number`               | Seconds per 500 m.                                                                     |
+| `power`             | `number`               | Average watts.                                                                         |
+| `strokeRate`        | `number`               | Strokes per minute.                                                                    |
+| `heartRate`         | `number \| null`       | Beats per minute; `null` without a heart rate belt.                                    |
+| `calories`          | `number`               | Calories burned.                                                                       |
+| `dragFactor`        | `number`               |                                                                                        |
+| `strokeCount`       | `number`               | Strokes since the workout began.                                                       |
+| `driveLength`       | `number`               | Meters.                                                                                |
+| `driveTime`         | `number`               | Seconds.                                                                               |
+| `recoveryTime`      | `number`               | Seconds.                                                                               |
+| `strokeDistance`    | `number`               | Meters per stroke.                                                                     |
+| `peakDriveForce`    | `number`               | Pounds of force.                                                                       |
+| `averageDriveForce` | `number`               | Pounds of force.                                                                       |
+| `workPerStroke`     | `number`               | Joules.                                                                                |
+| `strokePower`       | `number`               | Watts of the last stroke.                                                              |
+| `strokeCalories`    | `number`               | Calories per hour at the last stroke's effort.                                         |
+| `projectedTime`     | `number`               | Projected total workout time at the current effort, in seconds.                        |
+| `projectedDistance` | `number`               | Projected total workout distance at the current effort, in meters.                     |
+
+The monitor sends the per-stroke fields (`strokeCount` to `projectedDistance`) once per stroke, so they are zero until the first stroke and reset when the monitor goes back to `'waiting'`. `elapsedTime` and `distance` restart with each workout, so don't assume they only grow.
+
+### Workout summary
+
+#### `connection.onWorkoutEnd(listener)`
+
+Calls `listener` with the final numbers when a workout ends, including a Just Row that you end on the monitor. Returns an unsubscribe function. After a minute of rest the monitor can send a revised summary with `recoveryHeartRate`, which calls the listener again. Check `workoutType` if you only want summaries of some workouts.
+
+`WorkoutSummary`:
+
+| Field               | Type                  | Notes                                                                   |
+| ------------------- | --------------------- | ----------------------------------------------------------------------- |
+| `workoutType`       | `WorkoutType \| null` |                                                                         |
+| `elapsedTime`       | `number`              | Seconds.                                                                |
+| `distance`          | `number`              | Meters.                                                                 |
+| `averagePace`       | `number`              | Seconds per 500 m.                                                      |
+| `averagePower`      | `number`              | Watts.                                                                  |
+| `averageStrokeRate` | `number`              | Strokes per minute.                                                     |
+| `calories`          | `number`              | Calories burned.                                                        |
+| `dragFactor`        | `number`              | Average for the workout.                                                |
+| `endingHeartRate`   | `number \| null`      | Beats per minute; the four heart rate fields are `null` without a belt. |
+| `averageHeartRate`  | `number \| null`      |                                                                         |
+| `minHeartRate`      | `number \| null`      |                                                                         |
+| `maxHeartRate`      | `number \| null`      |                                                                         |
+| `recoveryHeartRate` | `number \| null`      | Heart rate after a minute of rest; only in the revised summary.         |
 
 ### Firmware
 
@@ -163,7 +250,7 @@ The original error, when there is one, is in `error.cause`.
 
 ## Example app
 
-[`example/`](https://github.com/sergey-g-s/react-native-ergometer/tree/main/example) is a React Native app for trying the library on a device: it lists nearby monitors, connects, shows the connection details and starts a 2000 m workout. See [example/README.md](https://github.com/sergey-g-s/react-native-ergometer/blob/main/example/README.md).
+[`example/`](https://github.com/sergey-g-s/react-native-ergometer/tree/main/example) is a React Native app for trying the library on a device: it lists nearby monitors, connects, shows the connection details, starts a distance, time or calories workout and shows its live data and summary. See [example/README.md](https://github.com/sergey-g-s/react-native-ergometer/blob/main/example/README.md).
 
 ## Development
 
@@ -183,16 +270,17 @@ Changes go through a pull request. Add a changeset (`pnpm changeset`) when you c
 
 ## References
 
-- [Concept2 PM CSAFE Communication Definition](https://cms.concept2.com/sites/default/files/2026-03/Concept2%20PM%20CSAFE%20Communication%20Definition.pdf): the CSAFE commands used to program workouts.
+- [Concept2 PM CSAFE Communication Definition](https://cms.concept2.com/sites/default/files/2026-03/Concept2%20PM%20CSAFE%20Communication%20Definition.pdf): the CSAFE commands used to program workouts and the Bluetooth characteristics for live data and the workout summary.
 
 ## Roadmap
 
 - [x] Scan for PM5 monitors.
 - [x] Connect to monitor and read device information.
-- [x] Start a fixed-distance workout.
-- [ ] Live data from the monitor during a workout: distance, pace, speed, stroke rate, power, calories, time.
-- [ ] Workout summary when a workout ends.
-- [ ] More workout types: time, calories, intervals by distance or time, Just Row.
+- [x] Start a fixed distance workout.
+- [x] Live data from the monitor during a workout.
+- [x] Workout summary when a workout ends.
+- [x] Time and calories workouts.
+- [ ] More workout types: intervals by distance or time, Just Row.
 - [ ] Later: other machines that use the standard Fitness Machine Service (FTMS).
 
 ## License
