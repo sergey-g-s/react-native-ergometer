@@ -64,6 +64,9 @@ jest.mock('react-native-ble-plx', () => ({
     ) {
       mockWrites.push(value);
     }
+    monitorCharacteristicForDevice() {
+      return { remove() {} };
+    }
     onDeviceDisconnected() {
       return { remove() {} };
     }

@@ -117,6 +117,27 @@ function createStyles(theme: Theme) {
       fontSize: 13,
       color: theme.text,
     },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    tile: {
+      flexBasis: '48%',
+      flexGrow: 1,
+      padding: 12,
+      gap: 4,
+    },
+    tileLabel: {
+      fontSize: 12,
+      color: theme.muted,
+    },
+    tileValue: {
+      fontFamily: monoFont,
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.text,
+    },
     inputLabel: {
       fontSize: 13,
       fontWeight: '600',

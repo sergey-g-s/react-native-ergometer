@@ -18,6 +18,18 @@ export const PM5_CONTROL = {
   command: 'ce060021-43e5-11e4-916c-0800200c9a66',
 };
 
+/** PM5 rowing service and the characteristics that notify workout data. */
+export const PM5_ROWING = {
+  service: 'ce060030-43e5-11e4-916c-0800200c9a66',
+  generalStatus: 'ce060031-43e5-11e4-916c-0800200c9a66',
+  additionalStatus1: 'ce060032-43e5-11e4-916c-0800200c9a66',
+  additionalStatus2: 'ce060033-43e5-11e4-916c-0800200c9a66',
+  strokeData: 'ce060035-43e5-11e4-916c-0800200c9a66',
+  additionalStrokeData: 'ce060036-43e5-11e4-916c-0800200c9a66',
+  endOfWorkoutSummary: 'ce060039-43e5-11e4-916c-0800200c9a66',
+  endOfWorkoutSummary2: 'ce06003a-43e5-11e4-916c-0800200c9a66',
+};
+
 // Erg machine type codes from the PM5 device information service, grouped by machine.
 const ERG_MACHINE_TYPES: [MachineType, number[]][] = [
   ['row', [0, 1, 2, 3, 5, 7, 8, 16, 17, 18, 19, 20, 32, 224]],
