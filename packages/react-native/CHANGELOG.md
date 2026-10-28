@@ -1,5 +1,16 @@
 # react-native-ergometer
 
+## 0.3.0
+
+### Minor Changes
+
+- 99a27cb: Add interval workouts: `startWorkout({ intervals })` with a distance, duration or calories and a `rest` per interval, `continueWorkout()` to end a rest without a set length, and interval and rest fields in the live data and the workout summary
+
+### Patch Changes
+
+- @ergometer/core@0.3.0
+  - @ergometer/pm5@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

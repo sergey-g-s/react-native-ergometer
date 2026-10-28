@@ -1,6 +1,6 @@
 {
   "name": "react-native-ergometer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React Native library for fitness ergometers over Bluetooth Low Energy",
   "license": "MIT",
   "author": "Serhii Hryshko (https://github.com/sergey-g-s)",

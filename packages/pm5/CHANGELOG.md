@@ -1,5 +1,11 @@
 # @ergometer/pm5
 
+## 0.3.0
+
+### Patch Changes
+
+- @ergometer/core@0.3.0
+
 ## 0.2.0
 
 ### Patch Changes
