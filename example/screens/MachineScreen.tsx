@@ -15,6 +15,11 @@ import {
   Section,
   SegmentedControl,
 } from '../components';
+import {
+  IntervalsEditor,
+  intervalsFromDrafts,
+  newInterval,
+} from '../IntervalsEditor';
 import { liveMetrics, summaryMetrics } from '../metrics';
 import type { RootStackParamList } from '../navigation';
 import { useStyles } from '../styles';
@@ -51,6 +56,13 @@ const WORKOUT_KINDS: {
   },
 ];
 
+type Mode = WorkoutKind | 'intervals';
+
+const MODES: { value: Mode; label: string }[] = [
+  ...WORKOUT_KINDS,
+  { value: 'intervals', label: 'Intervals' },
+];
+
 export function MachineScreen({
   navigation,
   route,
@@ -59,8 +71,9 @@ export function MachineScreen({
   const connection = useErgConnections().find(
     item => item.id === route.params.id,
   );
-  const [kind, setKind] = useState<WorkoutKind>('distance');
+  const [mode, setMode] = useState<Mode>('distance');
   const [amount, setAmount] = useState('2000');
+  const [drafts, setDrafts] = useState([newInterval(1)]);
   const [workoutError, setWorkoutError] = useState<string | null>(null);
   const [data, setData] = useState<WorkoutData | null>(null);
   const [summary, setSummary] = useState<WorkoutSummary | null>(null);
@@ -95,8 +108,30 @@ export function MachineScreen({
     ['hardwareRevision', connection.hardwareRevision ?? '—'],
     ['isConnected', String(connection.isConnected)],
   ];
-  const workoutKind = WORKOUT_KINDS.find(item => item.value === kind)!;
+  const workoutKind = WORKOUT_KINDS.find(item => item.value === mode);
   const quantity = Number(amount);
+  const intervals = intervalsFromDrafts(drafts);
+
+  let workout: Workout | null = null;
+  if (!workoutKind) {
+    workout = intervals && { intervals };
+  } else if (Number.isInteger(quantity) && quantity > 0) {
+    workout = workoutKind.build(quantity);
+  }
+
+  const start = () => {
+    if (!workout) {
+      return;
+    }
+    setWorkoutError(null);
+    setSummary(null);
+    connection
+      .startWorkout(workout)
+      .catch((error: unknown) => setWorkoutError(String(error)));
+  };
+  const startButton = (
+    <AppButton title="Start" disabled={!workout} onPress={start} />
+  );
 
   return (
     <Screen edges={['top', 'bottom']}>
@@ -130,38 +165,49 @@ export function MachineScreen({
         <Section title="Workouts">
           <View style={[styles.card, styles.cardBody]}>
             <SegmentedControl
-              options={WORKOUT_KINDS}
-              value={kind}
+              options={MODES}
+              value={mode}
               onChange={next => {
-                setKind(next);
+                setMode(next);
                 setAmount(
-                  WORKOUT_KINDS.find(item => item.value === next)!.initial,
+                  WORKOUT_KINDS.find(item => item.value === next)?.initial ??
+                    '',
                 );
                 setWorkoutError(null);
               }}
             />
-            <Text style={styles.inputLabel}>{workoutKind.input}</Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                accessibilityLabel={workoutKind.input}
-                keyboardType="number-pad"
-                value={amount}
-                onChangeText={setAmount}
-                placeholderTextColor={theme.muted}
-                style={styles.input}
-              />
+            {workoutKind ? (
+              <>
+                <Text style={styles.inputLabel}>{workoutKind.input}</Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    accessibilityLabel={workoutKind.input}
+                    keyboardType="number-pad"
+                    value={amount}
+                    onChangeText={setAmount}
+                    placeholderTextColor={theme.muted}
+                    style={styles.input}
+                  />
+                  {startButton}
+                </View>
+              </>
+            ) : (
+              <>
+                <IntervalsEditor drafts={drafts} onChange={setDrafts} />
+                {startButton}
+              </>
+            )}
+            {data?.workoutState === 'rest' && (
               <AppButton
-                title="Start"
-                disabled={!Number.isInteger(quantity) || quantity <= 0}
+                title="Continue"
+                variant="soft"
                 onPress={() => {
-                  setWorkoutError(null);
-                  setSummary(null);
                   connection
-                    .startWorkout(workoutKind.build(quantity))
+                    .continueWorkout()
                     .catch((error: unknown) => setWorkoutError(String(error)));
                 }}
               />
-            </View>
+            )}
             {workoutError && <ErrorBanner message={workoutError} />}
           </View>
         </Section>

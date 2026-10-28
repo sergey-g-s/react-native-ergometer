@@ -162,6 +162,20 @@ function createStyles(theme: Theme) {
       fontWeight: '600',
       color: theme.text,
     },
+    intervalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    removeText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.error,
+    },
+    inputColumn: {
+      flex: 1,
+      gap: 4,
+    },
     inputLabel: {
       fontSize: 13,
       fontWeight: '600',

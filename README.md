@@ -11,7 +11,7 @@ Built on [react-native-ble-plx](https://github.com/dotintent/react-native-ble-pl
 - Scan for PM5 monitors, with machine type (row, ski, bike) and serial number.
 - Connect to several monitors at once; connections stay open across screens.
 - Read serial number, machine type, firmware version and hardware revision after connecting.
-- Start a fixed distance, time or calories workout on the monitor.
+- Start a fixed distance, time or calories workout, or a list of intervals with rest, on the monitor.
 - Live data during a workout: time, distance, pace, power, stroke rate, heart rate, calories and per-stroke readings.
 - The final numbers when a workout ends.
 - Fetch the latest public PM5 firmware from Concept2.
@@ -117,6 +117,7 @@ The connection stays open until you call `disconnect()` or the monitor goes away
 | `hardwareRevision`        | As reported by the monitor, e.g. `340`.                                                                                   |
 | `isConnected`             | `false` once the connection closes. A closed connection can't be reused; call `connectDevice` again.                      |
 | `startWorkout(workout)`   | See [Workouts](#workouts).                                                                                                |
+| `continueWorkout()`       | Ends a rest that has no set length. See [Interval workouts](#interval-workouts).                                          |
 | `onWorkoutData(listener)` | See [Live data](#live-data).                                                                                              |
 | `onWorkoutEnd(listener)`  | See [Workout summary](#workout-summary).                                                                                  |
 | `disconnect()`            | Closes the connection.                                                                                                    |
@@ -146,6 +147,8 @@ Programs a fixed workout on the monitor and opens its workout screen, ready to s
 | `{ duration: number }` | seconds  | A whole number from 20 to 35999 (9:59:59). | The whole duration, at most 90 minutes. |
 | `{ calories: number }` | calories | A whole number from 5 to 65535.            | The whole amount.                       |
 
+`{ intervals: Interval[] }` programs an [interval workout](#interval-workouts).
+
 A value outside the range throws `RangeError`; a lost connection throws `ConnectionError`. Subscribe to [live data](#live-data) before you start to see the workout from its first stroke.
 
 ```ts
@@ -153,6 +156,35 @@ await pm5.startWorkout({ distance: 2000 });
 await pm5.startWorkout({ duration: 20 * 60 });
 await pm5.startWorkout({ calories: 100 });
 ```
+
+#### Interval workouts
+
+`startWorkout({ intervals })` takes a list of 1 to 50 intervals. Each interval is a distance, a duration or calories, plus the rest that follows it:
+
+| Interval               | Unit     | Accepted values                              |
+| ---------------------- | -------- | -------------------------------------------- |
+| `{ distance: number }` | meters   | A whole number from 100 to 999999.           |
+| `{ duration: number }` | seconds  | A whole number from 20 to 359999 (99:59:59). |
+| `{ calories: number }` | calories | A whole number from 5 to 999.                |
+
+`rest` is the rest after the interval, in whole seconds from 0 to 595 (9:55). `rest: 0` goes straight to the next interval. When an interval has no `rest`, its rest has no set length and lasts until you call `connection.continueWorkout()`.
+
+```ts
+await pm5.startWorkout({
+  intervals: [
+    { distance: 500, rest: 60 }, // 60 s rest
+    { duration: 180, rest: 0 }, // no rest
+    { calories: 20 }, // rest until continueWorkout()
+  ],
+});
+
+// While `workoutState` is 'rest' after an interval without `rest`:
+await pm5.continueWorkout();
+```
+
+`continueWorkout()` presses the monitor's continue key, which needs a PM5 firmware that supports it. On older firmware the monitor ignores the key and you continue on the monitor itself.
+
+The monitor reports the rest in [live data](#live-data): `workoutState` is `'rest'` and `restTime`, `restDistance` and `intervalCount` change. Each interval is programmed as a variable interval, so a workout can mix distance, time and calories intervals.
 
 ### Live data
 
@@ -200,6 +232,9 @@ useEffect(() => {
 | `strokeCalories`    | `number`               | Calories per hour at the last stroke's effort.                                         |
 | `projectedTime`     | `number`               | Projected total workout time at the current effort, in seconds.                        |
 | `projectedDistance` | `number`               | Projected total workout distance at the current effort, in meters.                     |
+| `intervalCount`     | `number`               | Interval count as the monitor reports it; stays 0 outside interval workouts.           |
+| `restTime`          | `number`               | Rest time the monitor reports, in seconds.                                             |
+| `restDistance`      | `number`               | Rest distance the monitor reports, in meters.                                          |
 
 The monitor sends the per-stroke fields (`strokeCount` to `projectedDistance`) once per stroke, so they are zero until the first stroke and reset when the monitor goes back to `'waiting'`. `elapsedTime` and `distance` restart with each workout, so don't assume they only grow.
 
@@ -226,6 +261,9 @@ Calls `listener` with the final numbers when a workout ends, including a Just Ro
 | `minHeartRate`      | `number \| null`      |                                                                         |
 | `maxHeartRate`      | `number \| null`      |                                                                         |
 | `recoveryHeartRate` | `number \| null`      | Heart rate after a minute of rest; only in the revised summary.         |
+| `intervalCount`     | `number`              | Splits or intervals the workout was divided into.                       |
+| `totalRestDistance` | `number`              | Meters rowed during rest.                                               |
+| `restTime`          | `number`              | Rest time between intervals, in seconds.                                |
 
 ### Firmware
 
@@ -280,7 +318,8 @@ Changes go through a pull request. Add a changeset (`pnpm changeset`) when you c
 - [x] Live data from the monitor during a workout.
 - [x] Workout summary when a workout ends.
 - [x] Time and calories workouts.
-- [ ] More workout types: intervals by distance or time, Just Row.
+- [x] Interval workouts with rest.
+- [ ] Just Row workout.
 - [ ] Later: other machines that use the standard Fitness Machine Service (FTMS).
 
 ## License

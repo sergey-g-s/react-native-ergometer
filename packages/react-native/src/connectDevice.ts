@@ -9,8 +9,9 @@ import {
   PM5_CONTROL,
   PM5_INFO,
   PM5_ROWING,
-  workoutFrames,
   NO_STROKE_DATA,
+  continueFrame,
+  workoutFrames,
   parseAdditionalStatus1,
   parseAdditionalStatus2,
   parseAdditionalStrokeData,
@@ -140,19 +141,14 @@ export class Pm5Connection implements ErgConnection {
     return this.connected;
   }
 
-  /** Programs a fixed distance, time or calories workout and opens its screen on the PM5, ready to row. */
+  /** Programs a fixed distance, time, calories or interval workout and opens its screen on the PM5, ready to row. */
   async startWorkout(workout: Workout): Promise<void> {
-    if (!this.connected) {
-      throw new ConnectionError('PM5 is not connected');
-    }
-    for (const frame of workoutFrames(workout)) {
-      await this.bleManager.writeCharacteristicWithResponseForDevice(
-        this.id,
-        PM5_CONTROL.service,
-        PM5_CONTROL.command,
-        bytesToBase64(frame),
-      );
-    }
+    await this.writeFrames(workoutFrames(workout));
+  }
+
+  /** Ends a rest that has no set length and starts the next interval. */
+  async continueWorkout(): Promise<void> {
+    await this.writeFrames([continueFrame()]);
   }
 
   onWorkoutData(listener: (data: WorkoutData) => void): () => void {
@@ -182,6 +178,20 @@ export class Pm5Connection implements ErgConnection {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  private async writeFrames(frames: number[][]) {
+    if (!this.connected) {
+      throw new ConnectionError('PM5 is not connected');
+    }
+    for (const frame of frames) {
+      await this.bleManager.writeCharacteristicWithResponseForDevice(
+        this.id,
+        PM5_CONTROL.service,
+        PM5_CONTROL.command,
+        bytesToBase64(frame),
+      );
+    }
   }
 
   private monitor(
